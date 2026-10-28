@@ -11,10 +11,46 @@ model_data = joblib.load("phishing_model.joblib")
 model = model_data["model"]
 feature_columns = model_data["feature_columns"]
 
-# IMPORTANT:
-# Paste your exact extract_url_features(url) function
-# from your Google Colab notebook here.
-# It must return the same 13 features used during training.
+
+import re
+from urllib.parse import urlparse
+
+def extract_url_features(url):
+    url = str(url)
+
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
+
+    parsed = urlparse(url)
+    domain = parsed.netloc
+    path = parsed.path
+
+    features = {
+        'URLLength': len(url),
+        'DomainLength': len(domain),
+        'IsDomainIP': int(bool(re.match(
+            r'^\d+\.\d+\.\d+\.\d+$', domain.split(':')[0]
+        ))),
+        'NoOfDots': url.count('.'),
+        'NoOfHyphens': url.count('-'),
+        'NoOfAt': url.count('@'),
+        'NoOfQuestionMark': url.count('?'),
+        'NoOfAmpersand': url.count('&'),
+        'NoOfDigits': sum(c.isdigit() for c in url),
+        'NoOfSubdomains': max(
+            0, domain.split(':')[0].count('.') - 1
+        ),
+        'HasHTTPS': int(parsed.scheme == 'https'),
+        'HasSuspiciousWords': int(
+            any(word in url.lower() for word in [
+                'login', 'verify', 'update',
+                'secure', 'account', 'banking'
+            ])
+        ),
+        'PathLength': len(path)
+    }
+
+    return features
 
 
 st.set_page_config(
